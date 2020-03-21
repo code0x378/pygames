@@ -1,0 +1,6 @@
+venv/
+.idea/
+*.log
+pygame/
+settings.py
+/pygame/Setup.bak
