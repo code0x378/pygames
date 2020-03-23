@@ -19,7 +19,7 @@ class Star(pg.sprite.Sprite):
             self.tempImage = pg.image.load(os.path.join("res", "images", "starLarge.png")).convert()
 
         self.surf = self.tempImage.copy()
-        alpha = random.randint(20, 120)
+        alpha = random.randint(20, 75)
         self.surf.fill((255, 255, 255, alpha), None, pg.BLEND_RGBA_MULT)
         self.rect = self.surf.get_rect(center=(random.randint(0, SCREEN_WIDTH),
                                                random.randint(10, 20)))
