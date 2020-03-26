@@ -1,9 +1,13 @@
+import csv
+import getpass
 import os
 import random
 import time
 
 import pygame as pg
 from pygame.sprite import Sprite
+
+from common.utils import draw_text
 
 pg.mixer.init()
 pg.init()
@@ -14,21 +18,11 @@ SCREEN_HEIGHT = 768
 SHOT_DELAY = .20
 GAME_LENGTH = 8
 LIVES = 2
+FILE_HIGH_SCORES="high_scores.txt"
 FONT_SMALL = pg.font.Font(os.path.join("res", "fonts", 'gameplayed.ttf'), 18)
 FONT_MEDIUM = pg.font.Font(os.path.join("res", "fonts", 'gameplayed.ttf'), 32)
 FONT_LARGE = pg.font.Font(os.path.join("res", "fonts", 'gameplayed.ttf'), 48)
 IMAGE_UI_BG = pg.image.load(os.path.join("res", "images", "background_UI.png"))
-
-
-# ----------------------------------------------------------------------------
-# Utils
-# ----------------------------------------------------------------------------
-
-def draw_text(surf, text, x, y, font=FONT_MEDIUM):
-    text_surface = font.render(text, True, (255, 255, 255))
-    text_rect = text_surface.get_rect()
-    text_rect.midtop = (x, y)
-    surf.blit(text_surface, text_rect)
 
 
 # ----------------------------------------------------------------------------
@@ -42,10 +36,10 @@ class Player(pg.sprite.Sprite):
         self.surf.set_colorkey((0, 0, 0), pg.RLEACCEL)
         self.size = self.surf.get_size()
         self.surf = pg.transform.scale(self.surf, (int(self.size[0] * .1), int(self.size[1] * .1)))
-        self.reset()
+        self.rect = self.get_rect()
 
     def reset(self):
-        self.rect = self.surf.get_rect(center=((SCREEN_WIDTH - self.surf.get_width()) / 2, SCREEN_HEIGHT))
+        self.rect = self.get_rect()
 
     def update(self, pressed_keys):
         if pressed_keys[pg.K_UP]:
@@ -65,6 +59,9 @@ class Player(pg.sprite.Sprite):
             self.rect.top = 0
         if self.rect.bottom > SCREEN_HEIGHT:
             self.rect.bottom = SCREEN_HEIGHT
+
+    def get_rect(self):
+        return self.surf.get_rect(center=((SCREEN_WIDTH - self.surf.get_width()) / 2, SCREEN_HEIGHT))
 
 
 # ----------------------------------------------------------------------------
@@ -158,9 +155,9 @@ class Hud:
         self.lives_image = lives_image
 
     def update(self):
-        draw_text(self.game.screen, f"Level: {self.game.level}", 120, 10)
-        draw_text(self.game.screen, f"Score: {self.game.get_score()}", 120, 50)
-        draw_text(self.game.screen, f"Time: {self.game.get_time()}", SCREEN_WIDTH - 100, 10)
+        draw_text(self.game.screen, f"Level: {self.game.level}", 120, 10, FONT_MEDIUM)
+        draw_text(self.game.screen, f"Score: {self.game.get_score()}", 120, 50, FONT_MEDIUM)
+        draw_text(self.game.screen, f"Time: {self.game.get_time()}", SCREEN_WIDTH - 100, 10, FONT_MEDIUM)
         self.draw_lives(self.game.screen, self.lives_image)
 
     def draw_lives(self, surf, image):
@@ -199,6 +196,9 @@ class SpaceRunner:
         self.start_time = time.time()
         self.aliens_killed = 0
         self.shots_fired = 0
+        self.high_scores = []
+        self.load_high_scores()
+        self.save_high_scores()
 
         self.active = False
         self.game_length = GAME_LENGTH
@@ -235,6 +235,22 @@ class SpaceRunner:
     def get_time(self):
         return self.game_length - time.localtime(time.time() - self.start_time).tm_sec
 
+    def load_high_scores(self):
+        try:
+            with open(FILE_HIGH_SCORES, mode='r') as file:
+                reader = csv.reader(file, delimiter=',')
+                for row in reader:
+                    self.high_scores.append(row)
+        except:
+            print("No high score file")
+
+    def save_high_scores(self):
+        with open(FILE_HIGH_SCORES, mode='w+') as file:
+            writer = csv.writer(file)
+            for row in self.high_scores:
+                writer.writerow(row)
+
+
     # ----------------------------------------------------------------------------
     # GUI
     # ----------------------------------------------------------------------------
@@ -256,12 +272,12 @@ class SpaceRunner:
                     if event.key == pg.K_ESCAPE or event.key == pg.K_q or event.key == pg.K_b or event.key == pg.K_RETURN:
                         menu = False
                 elif event.type == pg.QUIT:
-                    quit()
+                    self.exit()
 
             self.screen.blit(IMAGE_UI_BG, self.screen.get_rect())
             draw_text(self.screen, "Help", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 200, FONT_LARGE)
-            draw_text(self.screen, "( Spacebar ) Shoot", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 80)
-            draw_text(self.screen, "( Arrows ) Move", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 0)
+            draw_text(self.screen, "( Spacebar ) Shoot", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 80, FONT_MEDIUM)
+            draw_text(self.screen, "( Arrows ) Move", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 0, FONT_MEDIUM)
             # draw_text(self.screen, "( Q ) uit", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) + 80)
             pg.display.flip()
 
@@ -271,19 +287,28 @@ class SpaceRunner:
             for event in pg.event.get():
                 if event.type == pg.KEYDOWN:
                     if event.key == pg.K_q:
-                        quit()
+                        self.exit()
                     elif event.key == event.key == pg.K_h:
                         self.display_help()
                     elif event.key == pg.K_RETURN or event.key == pg.K_p:
                         menu = False
                 elif event.type == pg.QUIT:
-                    quit()
+                    self.exit()
 
             self.screen.blit(IMAGE_UI_BG, self.screen.get_rect())
             draw_text(self.screen, f"New Game", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 200, FONT_LARGE)
-            draw_text(self.screen, "( P ) lay", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 80)
-            draw_text(self.screen, "( H ) elp", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 0)
-            draw_text(self.screen, "( Q ) uit", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) + 80)
+            draw_text(self.screen, "( P ) lay", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 80, FONT_MEDIUM)
+            draw_text(self.screen, "( H ) elp", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 0, FONT_MEDIUM)
+            draw_text(self.screen, "( Q ) uit", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) + 80, FONT_MEDIUM)
+
+            if self.high_scores:
+                draw_text(self.screen, "High Scores", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) + 170, FONT_SMALL)
+                offset = 200
+                self.high_scores.sort(key=lambda x: int(x[1]), reverse=True)
+                for score in self.high_scores[:3]:
+                    draw_text(self.screen, f"{score[1]} - {score[0]}", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) + offset, FONT_SMALL)
+                    offset += 30
+
             pg.display.flip()
 
     def display_level_complete(self):
@@ -294,18 +319,18 @@ class SpaceRunner:
                     if event.key == pg.K_ESCAPE:
                         menu = False
                     elif event.key == pg.K_q:
-                        quit()
+                        self.exit()
                     elif event.key == pg.K_RETURN or event.key == pg.K_c:
                         menu = False
                 elif event.type == pg.QUIT:
-                    quit()
+                    self.exit()
 
             self.screen.blit(IMAGE_UI_BG, self.screen.get_rect())
-            draw_text(self.screen, f"Level: {self.level}", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 300)
+            draw_text(self.screen, f"Level: {self.level}", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 300, FONT_MEDIUM)
             draw_text(self.screen, f"Level Complete", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 200, FONT_LARGE)
             draw_text(self.screen, f"Score: {self.get_score()}", SCREEN_WIDTH / 2,
-                      (SCREEN_HEIGHT / 2) - 100)
-            draw_text(self.screen, "( C ) ontinue", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 0)
+                      (SCREEN_HEIGHT / 2) - 100, FONT_MEDIUM)
+            draw_text(self.screen, "( C ) ontinue", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 0, FONT_MEDIUM)
             pg.display.flip()
 
     def display_paused(self):
@@ -316,7 +341,7 @@ class SpaceRunner:
                     if event.key == pg.K_ESCAPE:
                         menu = False
                     elif event.key == pg.K_q:
-                        quit()
+                        self.exit()
                     elif event.key == pg.K_r:
                         self.active = False
                         self.reset()
@@ -324,15 +349,15 @@ class SpaceRunner:
                     elif event.key == pg.K_RETURN or event.key == pg.K_c:
                         menu = False
                 elif event.type == pg.QUIT:
-                    quit()
+                    self.exit()
 
             self.screen.blit(IMAGE_UI_BG, self.screen.get_rect())
             draw_text(self.screen, f"Score: {self.get_score()}", SCREEN_WIDTH / 2,
-                      (SCREEN_HEIGHT / 2) - 280)
+                      (SCREEN_HEIGHT / 2) - 280, FONT_MEDIUM)
             draw_text(self.screen, f"Game Paused", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 200, FONT_LARGE)
-            draw_text(self.screen, "( C ) ontinue", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 80)
-            draw_text(self.screen, "( R ) estart", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 0)
-            draw_text(self.screen, "( Q ) uit", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) + 80, )
+            draw_text(self.screen, "( C ) ontinue", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 80, FONT_MEDIUM)
+            draw_text(self.screen, "( R ) estart", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 0, FONT_MEDIUM)
+            draw_text(self.screen, "( Q ) uit", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) + 80,  FONT_MEDIUM)
             pg.display.flip()
 
     def display_end(self):
@@ -343,19 +368,19 @@ class SpaceRunner:
                     if event.key == pg.K_ESCAPE or event.key == pg.K_c:
                         menu = False
                     elif event.key == pg.K_q:
-                        quit()
+                        self.exit()
                     elif event.key == pg.K_RETURN or event.key == pg.K_r:
                         menu = False
                 elif event.type == pg.QUIT:
-                    quit()
+                    self.exit()
 
             self.screen.blit(IMAGE_UI_BG, self.screen.get_rect())
             draw_text(self.screen, f"Score: {self.get_score()}", SCREEN_WIDTH / 2,
-                      (SCREEN_HEIGHT / 2) - 280)
+                      (SCREEN_HEIGHT / 2) - 280, FONT_MEDIUM)
             draw_text(self.screen, f"Game Over", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 200, FONT_LARGE)
-            draw_text(self.screen, "( C ) ontinue", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 80)
-            draw_text(self.screen, "( R ) estart", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 0)
-            draw_text(self.screen, "( Q ) uit", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) + 80, )
+            draw_text(self.screen, "( C ) ontinue", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 80, FONT_MEDIUM)
+            draw_text(self.screen, "( R ) estart", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) - 0, FONT_MEDIUM)
+            draw_text(self.screen, "( Q ) uit", SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) + 80, FONT_MEDIUM )
             pg.display.flip()
 
     # ----------------------------------------------------------------------------
@@ -423,6 +448,7 @@ class SpaceRunner:
             if pg.sprite.spritecollideany(self.player, self.enemies):
                 if self.lives == 0:
                     self.active = False
+                    self.high_scores.append([ getpass.getuser(), self.score])
                     self.display_end()
                     self.reset()
                 elif self.lives > 0:
@@ -448,7 +474,11 @@ class SpaceRunner:
             self.fpsClock.tick(60)
 
         pg.mixer.music.stop()
-        pg.quit()
+        self.exit()
+
+    def exit(self):
+        self.save_high_scores()
+        quit()
 
 
 if __name__ == "__main__":
