@@ -5,3 +5,4 @@ pygame/
 settings.py
 /pygame/Setup.bak
 high_scores.txt
+/.venv/

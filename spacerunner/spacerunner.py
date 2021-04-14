@@ -22,7 +22,7 @@ FILE_HIGH_SCORES="high_scores.txt"
 FONT_SMALL = pg.font.Font(os.path.join("res", "fonts", 'gameplayed.ttf'), 18)
 FONT_MEDIUM = pg.font.Font(os.path.join("res", "fonts", 'gameplayed.ttf'), 32)
 FONT_LARGE = pg.font.Font(os.path.join("res", "fonts", 'gameplayed.ttf'), 48)
-IMAGE_UI_BG = pg.image.load(os.path.join("res", "images", "background_UI.png"))
+IMAGE_UI_BG = pg.image.load(os.path.join("res", "images", "background_ui.png"))
 
 
 # ----------------------------------------------------------------------------
